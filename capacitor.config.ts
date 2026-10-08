@@ -2,7 +2,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "com.nitrocircuit.game",
-  appName: "Nitro Circuit",
+  appName: "Tesla Royale",
   webDir: "dist",
   backgroundColor: "#07101c",
 };

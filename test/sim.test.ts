@@ -51,7 +51,7 @@ for (const def of TRACKS) {
     }
     assert.equal(race.player.lap, def.laps, "player lap count");
     const places = race.cars.map((c) => c.place).sort();
-    assert.deepEqual(places, [1, 2, 3, 4], "unique places");
+    assert.deepEqual(places, [1, 2, 3, 4, 5, 6], "unique places");
   });
 }
 
@@ -71,14 +71,14 @@ test("start grid sits behind the line and every car faces along the track", () =
     const track = buildTrack(def);
     const race = spawnRace(track, 2, false);
     for (const c of race.cars) {
-      assert.ok(c.trackPos < 0 && c.trackPos > -200, `grid pos ${c.trackPos}`);
+      assert.ok(c.trackPos < 0 && c.trackPos > -260, `grid pos ${c.trackPos}`);
       const s = track.samples[c.idx];
       const dot = -Math.sin(c.heading) * s.tx + -Math.cos(c.heading) * s.ty;
       assert.ok(dot > 0.99, "facing forward");
       assert.ok(c.dist < def.roadHalf, "on the road");
     }
     assert.equal(race.player.def.id, CARS[2].id);
-    assert.equal(new Set(race.cars.map((c) => c.def.id)).size, 4, "four distinct cars");
+    assert.equal(new Set(race.cars.map((c) => c.def.id)).size, 6, "six distinct cars");
   }
 });
 
@@ -87,6 +87,17 @@ test("track geometry: corners wider than the road, sections don't touch", () => 
     const t = buildTrack(def);
     const minR = Math.min(...t.radius);
     assert.ok(minR > def.roadHalf * 1.1, `${def.id} min radius ${minR.toFixed(0)}`);
+    // Far-apart sections must not touch each other.
+    let minD = Infinity;
+    const S = t.samples;
+    for (let i = 0; i < S.length; i += 2) {
+      for (let j = i + 1; j < S.length; j += 2) {
+        const arc = Math.min(Math.abs(S[j].s - S[i].s), t.length - Math.abs(S[j].s - S[i].s));
+        if (arc < 500) continue;
+        minD = Math.min(minD, Math.hypot(S[i].x - S[j].x, S[i].y - S[j].y));
+      }
+    }
+    assert.ok(minD > def.roadHalf * 2 + 40, `${def.id} sections ${minD.toFixed(0)} apart`);
   }
 });
 

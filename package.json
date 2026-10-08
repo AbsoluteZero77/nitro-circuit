@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Nitro Circuit — top-down Amiga-style racing game (web + Android APK via Capacitor)",
+  "description": "Tesla Royale - top-down racing game (web + Android APK via Capacitor)",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",

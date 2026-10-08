@@ -4,8 +4,8 @@ import { App as CapApp } from "@capacitor/app";
 import { createEngine, type Engine, type UiState } from "../game/engine";
 import { CARS, TRACKS } from "../game/tracks";
 import { formatTime } from "../game/math";
+import { carPreview } from "../game/render";
 
-const BASE = import.meta.env.BASE_URL;
 
 const initialUi: UiState = {
   screen: "title",
@@ -24,7 +24,7 @@ const initialUi: UiState = {
   results: null,
 };
 
-export function NitroCircuit() {
+export function TeslaRoyale() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<Engine | null>(null);
   const [ui, setUi] = useState<UiState>(initialUi);
@@ -85,15 +85,15 @@ function Title({
       <div className="copper-bars h-2.5 w-full" />
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-6">
         <p className="mb-2 text-center text-xs tracking-[0.35em] text-accent-2">
-          KICKSTART SOFTWARE PRESENTS
+          6 CARS · 7 CIRCUITS
         </p>
         <h1 className="font-display text-6xl font-bold leading-none tracking-tight text-fg sm:text-7xl">
-          NITRO
+          TESLA
         </h1>
         <h1 className="mb-2 font-display text-6xl font-bold leading-none tracking-tight text-accent sm:text-7xl">
-          CIRCUIT
+          ROYALE
         </h1>
-        <p className="mb-8 font-mono text-sm text-muted">AMIGA 600 · 1994</p>
+        <p className="mb-8 font-mono text-sm text-muted">TOP-DOWN RACING</p>
         <div className="flex w-full max-w-sm flex-col gap-3">
           <MenuBtn primary onClick={() => engine()?.startRace()}>
             Start
@@ -111,7 +111,7 @@ function Title({
         )}
       </div>
       <div className="flex items-center justify-between px-4 py-2">
-        <p className="font-mono text-[10px] tracking-widest text-muted">BLITTERSOFT 1994</p>
+        <p className="font-mono text-[10px] tracking-widest text-muted">TESLA ROYALE</p>
         <button
           type="button"
           className="font-mono text-[10px] tracking-widest text-muted"
@@ -134,63 +134,67 @@ function Garage({
 }) {
   const car = CARS[ui.selectedCar];
   return (
-    <div className="absolute inset-0 z-20 flex flex-col bg-bg/70 px-4 py-6 backdrop-blur-[2px] sm:px-8">
-      <div className="copper-bars mb-4 h-1.5 w-full" />
-      <div className="mb-4 flex items-end justify-between gap-3">
+    <div className="absolute inset-0 z-20 flex flex-col overflow-y-auto bg-bg/85 px-4 py-4 backdrop-blur-[2px] sm:px-8">
+      <div className="copper-bars mb-3 h-1 w-full shrink-0" />
+      <div className="mb-3 flex shrink-0 items-end justify-between gap-3">
         <div>
           <p className="font-mono text-[11px] tracking-[0.25em] text-accent-2">GARAGE</p>
-          <h2 className="font-display text-3xl font-semibold leading-none">Select machine</h2>
+          <h2 className="font-display text-3xl font-semibold leading-none">Choose your Tesla</h2>
         </div>
         <button type="button" className="font-mono text-xs text-muted" onClick={() => engine()?.title()}>
           BACK
         </button>
       </div>
-      <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 overflow-auto md:grid-cols-4">
-        {CARS.map((c, i) => (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => engine()?.selectCar(i)}
-            className={`amiga-bevel bg-surface p-3 text-left transition-colors ${
-              i === ui.selectedCar ? "ring-2 ring-accent" : ""
-            }`}
-          >
-            <img src={BASE + c.src} alt="" className="mx-auto h-24 w-24 object-contain" />
-            <p className="mt-2 font-display text-lg font-semibold leading-none">{c.name}</p>
-            <p className="font-mono text-[10px] text-muted">{c.handle}</p>
-          </button>
-        ))}
-      </div>
-      <div className="mt-4 amiga-bevel bg-surface p-4">
-        <p className="font-display text-xl font-semibold text-accent">{car.name}</p>
-        <p className="mb-3 text-sm text-muted">{car.blurb}</p>
-        <Stat label="ACCEL" value={car.accel} />
-        <Stat label="TOP" value={car.top / 1.1} />
-        <Stat label="GRIP" value={car.grip / 1.12} />
-        <Stat label="TURN" value={car.turn / 1.12} />
-      </div>
-      <div className="mt-4">
-        <p className="mb-2 font-mono text-[11px] tracking-[0.25em] text-accent-2">CIRCUIT</p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {TRACKS.map((t, i) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => engine()?.selectTrack(i)}
-              className={`amiga-bevel bg-surface-2 px-3 py-2 text-left ${
-                i === ui.selectedTrack ? "ring-2 ring-accent-2" : ""
-              }`}
-            >
-              <p className="font-display text-base font-semibold leading-tight">{t.name}</p>
-              <p className="font-mono text-[10px] text-muted">{t.subtitle}</p>
-              {ui.save.bestLap[t.id] != null && (
-                <p className="font-mono text-[10px] text-accent-2">{formatTime(ui.save.bestLap[t.id])}</p>
-              )}
-            </button>
-          ))}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <div className="grid grid-cols-3 gap-2">
+            {CARS.map((c, i) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => engine()?.selectCar(i)}
+                className={`amiga-bevel bg-surface p-2 text-left transition-colors ${
+                  i === ui.selectedCar ? "ring-2 ring-accent" : ""
+                }`}
+              >
+                <img src={carPreview(c)} alt="" className="mx-auto h-24 w-auto object-contain" />
+                <p className="mt-1 font-display text-sm font-semibold leading-none">{c.name}</p>
+                <p className="font-mono text-[9px] text-muted">{c.paint}</p>
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 amiga-bevel bg-surface p-3">
+            <p className="font-display text-xl font-semibold text-accent">{car.name}</p>
+            <p className="mb-2 text-sm text-muted">{car.blurb}</p>
+            <Stat label="ACCEL" value={car.accel} />
+            <Stat label="TOP" value={car.top / 1.1} />
+            <Stat label="GRIP" value={car.grip / 1.12} />
+            <Stat label="TURN" value={car.turn / 1.12} />
+          </div>
+        </div>
+        <div>
+          <p className="mb-2 font-mono text-[11px] tracking-[0.25em] text-accent-2">CIRCUIT</p>
+          <div className="grid grid-cols-2 gap-2">
+            {TRACKS.map((t, i) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => engine()?.selectTrack(i)}
+                className={`amiga-bevel bg-surface-2 px-3 py-2 text-left ${
+                  i === ui.selectedTrack ? "ring-2 ring-accent-2" : ""
+                }`}
+              >
+                <p className="font-display text-base font-semibold leading-tight">{t.name}</p>
+                <p className="font-mono text-[10px] text-muted">{t.subtitle}</p>
+                {ui.save.bestLap[t.id] != null && (
+                  <p className="font-mono text-[10px] text-accent-2">{formatTime(ui.save.bestLap[t.id])}</p>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-      <MenuBtn primary className="mt-4" onClick={() => engine()?.startRace()}>
+      <MenuBtn primary className="mt-4 shrink-0" onClick={() => engine()?.startRace()}>
         Race
       </MenuBtn>
     </div>
@@ -217,7 +221,7 @@ function Pause({
 }) {
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-bg/60 px-4">
-      <div className="amiga-bevel w-full max-w-sm bg-surface p-6">
+      <div className="amiga-bevel m-auto w-full max-w-sm bg-surface p-5">
         <h2 className="mb-4 font-display text-3xl font-semibold">Paused</h2>
         <div className="flex flex-col gap-3">
           <MenuBtn primary onClick={() => engine()?.resume()}>
@@ -246,13 +250,13 @@ function Results({
   const rows = ui.results ?? [];
   const you = rows.find((r) => r.name === "YOU");
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-bg/70 px-4">
-      <div className="amiga-bevel w-full max-w-md bg-surface p-6">
+    <div className="absolute inset-0 z-20 flex overflow-y-auto bg-bg/70 px-4 py-3">
+      <div className="amiga-bevel m-auto w-full max-w-md bg-surface p-5">
         <p className="font-mono text-[11px] tracking-[0.25em] text-accent-2">CHEQUERED FLAG</p>
         <h2 className="mb-4 font-display text-3xl font-semibold">
           {you?.place === 1 ? "You win" : `P${you?.place ?? "-"}`}
         </h2>
-        <ol className="mb-5 space-y-2">
+        <ol className="mb-4 space-y-1">
           {rows.map((r) => (
             <li
               key={r.name}
@@ -268,7 +272,7 @@ function Results({
             </li>
           ))}
         </ol>
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {ui.champ && ui.champ.round < TRACKS.length - 1 && (
             <MenuBtn primary onClick={() => engine()?.nextChampionshipRace()}>
               Next race
@@ -304,11 +308,11 @@ function Standings({
     .map((n, i) => ({ n, p: champ.points[i] }))
     .sort((a, b) => b.p - a.p);
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-bg/70 px-4">
-      <div className="amiga-bevel w-full max-w-md bg-surface p-6">
+    <div className="absolute inset-0 z-20 flex overflow-y-auto bg-bg/70 px-4 py-3">
+      <div className="amiga-bevel m-auto w-full max-w-md bg-surface p-5">
         <p className="font-mono text-[11px] tracking-[0.25em] text-accent-2">CHAMPIONSHIP</p>
         <h2 className="mb-4 font-display text-3xl font-semibold">Standings</h2>
-        <ol className="mb-5 space-y-2">
+        <ol className="mb-4 space-y-1">
           {ranked.map((r, i) => (
             <li key={r.n} className="flex justify-between font-mono text-sm">
               <span className={r.n === "YOU" ? "text-accent" : ""}>

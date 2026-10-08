@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #07101c;
-  --color-surface: #0e1a2e;
-  --color-surface-2: #15233c;
-  --color-fg: #e8e4d8;
-  --color-muted: #8a9bb0;
-  --color-accent: #e07a1a;
-  --color-accent-2: #3aa0c8;
-  --color-danger: #c43028;
+  --color-bg: #090b0f;
+  --color-surface: #14181f;
+  --color-surface-2: #1b2029;
+  --color-fg: #f2f4f7;
+  --color-muted: #8f9aab;
+  --color-accent: #e82127;
+  --color-accent-2: #5ab4f0;
+  --color-danger: #e82127;
   --color-ok: #3d9a4a;
-  --color-border: #2a3c58;
-  --color-bevel-hi: #3d5578;
-  --color-bevel-lo: #050810;
+  --color-border: #2a303b;
+  --color-bevel-hi: #2f3744;
+  --color-bevel-lo: #2f3744;
   --font-display: "Rajdhani", "Segoe UI", sans-serif;
   --font-mono: "Share Tech Mono", ui-monospace, monospace;
   --font-sans: "Rajdhani", "Segoe UI", sans-serif;
@@ -60,59 +60,28 @@
 
 @layer components {
   .amiga-bevel {
-    border-color: var(--color-bevel-hi) var(--color-bevel-lo) var(--color-bevel-lo)
-      var(--color-bevel-hi);
-    border-style: solid;
-    border-width: 2px;
+    border: 1px solid rgb(255 255 255 / 0.12);
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
   }
 
   .amiga-bevel-in {
-    border-color: var(--color-bevel-lo) var(--color-bevel-hi) var(--color-bevel-hi)
-      var(--color-bevel-lo);
-    border-style: solid;
-    border-width: 2px;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 6px;
   }
 
   .copper-bars {
-    background-image: repeating-linear-gradient(
-      to bottom,
-      #c43028 0 3px,
-      #e07a1a 3px 6px,
-      #d8c878 6px 9px,
-      #3d9a4a 9px 12px,
-      #3aa0c8 12px 15px,
-      #1a5f9e 15px 18px
-    );
-    background-size: 100% 18px;
-    animation: copper-scroll 1.8s linear infinite;
+    background: linear-gradient(90deg, #e82127 0%, #8a1418 55%, transparent 100%);
   }
 
   .scanlines {
-    background: repeating-linear-gradient(
-      to bottom,
-      rgb(0 0 0 / 0.18) 0 1px,
-      transparent 1px 3px
-    );
+    background: none;
     pointer-events: none;
   }
 
   .crt-vignette {
-    background: radial-gradient(ellipse at center, transparent 52%, rgb(0 0 0 / 0.55) 100%);
+    background: radial-gradient(ellipse at center, transparent 60%, rgb(0 0 0 / 0.35) 100%);
     pointer-events: none;
   }
 }
 
-@keyframes copper-scroll {
-  from {
-    background-position: 0 0;
-  }
-  to {
-    background-position: 0 18px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .copper-bars {
-    animation: none;
-  }
-}

@@ -5,10 +5,10 @@ import "@fontsource/rajdhani/600.css";
 import "@fontsource/rajdhani/700.css";
 import "@fontsource/share-tech-mono/400.css";
 import "./styles.css";
-import { NitroCircuit } from "./components/nitro-circuit";
+import { TeslaRoyale } from "./components/tesla-royale";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <NitroCircuit />
+    <TeslaRoyale />
   </StrictMode>,
 );

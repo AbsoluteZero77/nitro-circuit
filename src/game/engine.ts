@@ -1,10 +1,10 @@
 import { Input } from "./input.ts";
 import { GameAudio } from "./audio.ts";
 import { loadSave, recordTimes, writeSave, type SaveData } from "./save.ts";
-import { CARS, TRACKS, bakeTrack, type Track } from "./tracks.ts";
+import { TRACKS, bakeTrack, type Track } from "./tracks.ts";
 import { spawnRace, stepRace, type RaceState } from "./sim.ts";
 import {
-  createCamera, renderAttractScrim, renderHud, renderWorld, snapCamera, updateCamera, type Camera,
+  createCamera, renderAttractScrim, renderHud, renderWorld, snapCamera, updateCamera, viewScale, type Camera,
 } from "./render.ts";
 
 export type Screen = "title" | "garage" | "race" | "pause" | "results" | "standings";
@@ -25,8 +25,7 @@ export type UiState = {
 };
 
 const STEP = 1 / 60;
-const POINTS = [9, 6, 4, 3];
-const BASE = import.meta.env.BASE_URL;
+const POINTS = [10, 8, 6, 4, 3, 2];
 
 export function createEngine(canvas: HTMLCanvasElement, onUi: (s: UiState) => void) {
   const raw = canvas.getContext("2d");
@@ -34,7 +33,6 @@ export function createEngine(canvas: HTMLCanvasElement, onUi: (s: UiState) => vo
   const ctx: CanvasRenderingContext2D = raw;
   const input = new Input();
   const audio = new GameAudio();
-  const images = new Map<string, HTMLImageElement>();
   const baked = new Map<string, Track>();
   let save = loadSave();
   let screen: Screen = "title";
@@ -71,14 +69,14 @@ export function createEngine(canvas: HTMLCanvasElement, onUi: (s: UiState) => vo
   function bootAttract() {
     attract = true;
     race = spawnRace(getTrack(), selectedCar, true);
-    snapCamera(cam, race.cars[0]);
+    snapCamera(cam, race.cars[0], viewScale(viewW, viewH));
   }
 
   function startRace(opts?: { championship?: boolean; nextRound?: boolean }) {
     audio.unlock();
     attract = false;
     if (opts?.championship && !opts.nextRound) {
-      champ = { round: 0, points: [0, 0, 0, 0], names: ["YOU", "AGNUS", "PAULA", "DENISE"] };
+      champ = { round: 0, points: [0, 0, 0, 0, 0, 0], names: ["YOU", "AGNUS", "PAULA", "DENISE", "GARY", "LISA"] };
       selectedTrack = 0;
     }
     if (champ && opts?.nextRound) {
@@ -86,7 +84,7 @@ export function createEngine(canvas: HTMLCanvasElement, onUi: (s: UiState) => vo
       selectedTrack = champ.round;
     }
     race = spawnRace(getTrack(TRACKS[selectedTrack].id), selectedCar, false);
-    snapCamera(cam, race.player);
+    snapCamera(cam, race.player, viewScale(viewW, viewH));
     screen = "race";
     results = null;
     lastBeep = 4;
@@ -178,7 +176,7 @@ export function createEngine(canvas: HTMLCanvasElement, onUi: (s: UiState) => vo
     if (race && (screen === "race" || screen === "title" || screen === "garage")) {
       const focus = screen === "race" ? race.player : race.cars.reduce((a, b) => (a.trackPos > b.trackPos ? a : b));
       const spd = Math.hypot(focus.vx, focus.vy);
-      updateCamera(cam, focus, dt, spd);
+      updateCamera(cam, focus, dt, spd, viewScale(viewW, viewH));
       if (save.shake && screen === "race") {
         const sh = race.trauma * race.trauma * 14;
         cam.shakeX = (Math.random() - 0.5) * sh;
@@ -205,7 +203,7 @@ export function createEngine(canvas: HTMLCanvasElement, onUi: (s: UiState) => vo
     }
 
     if (race) {
-      renderWorld(ctx, race, cam, images, viewW, viewH);
+      renderWorld(ctx, race, cam, viewW, viewH);
       if (screen === "race" || screen === "pause") renderHud(ctx, race, viewW, viewH, save.bestLap[race.track.def.id]);
       else if (screen === "title" || screen === "garage") renderAttractScrim(ctx, viewW, viewH);
     } else {
@@ -216,11 +214,6 @@ export function createEngine(canvas: HTMLCanvasElement, onUi: (s: UiState) => vo
     if (race && race.finished && screen === "race") finishRace();
   }
 
-  for (const car of CARS) {
-    const img = new Image();
-    img.src = BASE + car.src;
-    images.set(car.src, img);
-  }
   // Canvas text doesn't trigger web-font loading by itself.
   void Promise.all([
     document.fonts?.load("700 40px Rajdhani"),

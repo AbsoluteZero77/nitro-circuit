@@ -6,6 +6,8 @@ export const CAR_RADIUS = 16;
 
 export type Particle = {
   x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string;
+  /** Size growth per second (smoke puffs expand). */
+  grow: number;
 };
 export type Skid = { x0: number; y0: number; x1: number; y1: number; a: number };
 
@@ -52,9 +54,10 @@ export type RaceState = {
   playerFinishedAt: number;
 };
 
-export const AI_NAMES = ["AGNUS", "PAULA", "DENISE"];
-const AI_SKILL = [0.93, 0.96, 0.99];
-const AI_LANE = [-0.3, 0.35, -0.05];
+export const AI_NAMES = ["AGNUS", "PAULA", "DENISE", "GARY", "LISA"];
+const AI_SKILL = [0.93, 0.96, 0.99, 0.91, 0.95];
+const AI_LANE = [-0.3, 0.35, -0.05, 0.22, -0.18];
+export const GRID_SIZE = 6;
 
 export function headingFromTangent(tx: number, ty: number): number {
   return Math.atan2(-tx, -ty);
@@ -65,12 +68,12 @@ export function spawnRace(track: Track, playerCarIndex: number, attract: boolean
   const N = S.length;
   const others = CARS.map((_, i) => i).filter((i) => i !== playerCarIndex);
   // Grid slots: [distance behind line, side]. The player's car takes the 3rd slot.
-  const slots: [number, number][] = [[45, -24], [45, 24], [115, -24], [115, 24]];
-  const playerSlot = 2;
+  const slots: [number, number][] = [[45, -26], [45, 26], [115, -26], [115, 26], [185, -26], [185, 26]];
+  const playerSlot = 3;
   const cars: Car[] = [];
   let aiNo = 0;
   let otherNo = 0;
-  for (let slot = 0; slot < 4; slot++) {
+  for (let slot = 0; slot < GRID_SIZE; slot++) {
     const isPlayer = !attract && slot === playerSlot;
     const defIdx = slot === playerSlot ? playerCarIndex : others[otherNo++];
     const [dd, side] = slots[slot];
@@ -86,7 +89,7 @@ export function spawnRace(track: Track, playerCarIndex: number, attract: boolean
       vx: 0, vy: 0,
       def: CARS[defIdx],
       isPlayer,
-      name: isPlayer ? "YOU" : AI_NAMES[n % 3],
+      name: isPlayer ? "YOU" : AI_NAMES[n % AI_NAMES.length],
       throttle: 0, steer: 0, brake: 0, handbrake: false,
       boost: 0, boostCharge: 0,
       lap: 0, lapTime: 0, bestLap: 0, raceTime: 0,
@@ -98,7 +101,7 @@ export function spawnRace(track: Track, playerCarIndex: number, attract: boolean
       dist: loc.d, lat: loc.lat,
       wrongWay: false,
       radius: CAR_RADIUS,
-      lane: AI_LANE[n % 3], skill: AI_SKILL[n % 3], stuckT: 0, reverseT: 0,
+      lane: AI_LANE[n % AI_LANE.length], skill: AI_SKILL[n % AI_SKILL.length], stuckT: 0, reverseT: 0,
       lastSkidX: x, lastSkidY: y,
     });
   }
@@ -115,13 +118,17 @@ export function spawnRace(track: Track, playerCarIndex: number, attract: boolean
   };
 }
 
-function emit(race: RaceState, x: number, y: number, vx: number, vy: number, color: string, n = 6) {
+function emit(
+  race: RaceState, x: number, y: number, vx: number, vy: number, color: string, n = 6,
+  size = 2, grow = 0, life = 0.65,
+) {
   for (let i = 0; i < n; i++) {
+    const l = life * (0.5 + Math.random() * 0.5);
     race.particles.push({
-      x, y, vx: vx + (Math.random() - 0.5) * 80, vy: vy + (Math.random() - 0.5) * 80,
-      life: 0.25 + Math.random() * 0.4, max: 0.65, size: 2 + Math.random() * 3, color,
+      x, y, vx: vx + (Math.random() - 0.5) * 70, vy: vy + (Math.random() - 0.5) * 70,
+      life: l, max: l, size: size * (0.7 + Math.random() * 0.6), color, grow,
     });
-    if (race.particles.length > 220) race.particles.shift();
+    if (race.particles.length > 260) race.particles.shift();
   }
 }
 
@@ -207,7 +214,7 @@ function stepCar(race: RaceState, car: Car, dt: number) {
       car.vy -= oy * vn * 1.35;
       if (car.isPlayer && vn > 80) {
         race.trauma = Math.min(1, race.trauma + 0.35);
-        emit(race, car.x, car.y, -ox * 40, -oy * 40, "#e8e0d0", 10);
+        emit(race, car.x, car.y, -ox * 40, -oy * 40, "#ffd070", 8, 1.6, 0, 0.35);
       }
     }
     // scraping the barrier scrubs speed
@@ -249,14 +256,14 @@ function stepCar(race: RaceState, car: Car, dt: number) {
       if (race.skids.length > 420) race.skids.shift();
       car.lastSkidX = car.x;
       car.lastSkidY = car.y;
-      if (car.isPlayer) emit(race, car.x, car.y, -nfx * 10, -nfy * 10, "#e0b21a", 2);
+      emit(race, car.x - nfx * 18, car.y - nfy * 18, -nfx * 10, -nfy * 10, "rgba(235,235,240,0.55)", 1, 6, 16, 0.9);
     }
   } else {
     car.lastSkidX = car.x;
     car.lastSkidY = car.y;
   }
   if (!onRoad && Math.abs(spdF) > 40) {
-    emit(race, car.x, car.y, -car.vx * 0.05, -car.vy * 0.05, onSand ? "#c4a05a" : "#2a6b28", 1);
+    emit(race, car.x, car.y, -car.vx * 0.05, -car.vy * 0.05, onSand ? "rgba(196,160,90,0.5)" : "rgba(60,110,50,0.5)", 1, 4, 10, 0.6);
   }
 }
 
@@ -438,6 +445,7 @@ export function stepRace(race: RaceState, dt: number, playerActions: Actions | n
     p.life -= dt;
     p.x += p.vx * dt;
     p.y += p.vy * dt;
+    p.size += p.grow * dt;
     p.vx *= 0.92;
     p.vy *= 0.92;
   }
