@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #07101c;
+  --color-surface: #0e1a2e;
+  --color-surface-2: #15233c;
+  --color-fg: #e8e4d8;
+  --color-muted: #8a9bb0;
+  --color-accent: #e07a1a;
+  --color-accent-2: #3aa0c8;
+  --color-danger: #c43028;
+  --color-ok: #3d9a4a;
+  --color-border: #2a3c58;
+  --color-bevel-hi: #3d5578;
+  --color-bevel-lo: #050810;
+  --font-display: "Rajdhani", "Segoe UI", sans-serif;
+  --font-mono: "Share Tech Mono", ui-monospace, monospace;
+  --font-sans: "Rajdhani", "Segoe UI", sans-serif;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --radius-xl: 22px;
+}
+
+@layer base {
+  :root {
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-l: env(safe-area-inset-left, 0px);
+  }
+  * {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .amiga-bevel {
+    border-color: var(--color-bevel-hi) var(--color-bevel-lo) var(--color-bevel-lo)
+      var(--color-bevel-hi);
+    border-style: solid;
+    border-width: 2px;
+  }
+
+  .amiga-bevel-in {
+    border-color: var(--color-bevel-lo) var(--color-bevel-hi) var(--color-bevel-hi)
+      var(--color-bevel-lo);
+    border-style: solid;
+    border-width: 2px;
+  }
+
+  .copper-bars {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      #c43028 0 3px,
+      #e07a1a 3px 6px,
+      #d8c878 6px 9px,
+      #3d9a4a 9px 12px,
+      #3aa0c8 12px 15px,
+      #1a5f9e 15px 18px
+    );
+    background-size: 100% 18px;
+    animation: copper-scroll 1.8s linear infinite;
+  }
+
+  .scanlines {
+    background: repeating-linear-gradient(
+      to bottom,
+      rgb(0 0 0 / 0.18) 0 1px,
+      transparent 1px 3px
+    );
+    pointer-events: none;
+  }
+
+  .crt-vignette {
+    background: radial-gradient(ellipse at center, transparent 52%, rgb(0 0 0 / 0.55) 100%);
+    pointer-events: none;
+  }
+}
+
+@keyframes copper-scroll {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copper-bars {
+    animation: none;
+  }
+}

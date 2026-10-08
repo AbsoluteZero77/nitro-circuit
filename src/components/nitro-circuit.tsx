@@ -1,0 +1,419 @@
+import { useEffect, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
+import { createEngine, type Engine, type UiState } from "../game/engine";
+import { CARS, TRACKS } from "../game/tracks";
+import { formatTime } from "../game/math";
+
+const BASE = import.meta.env.BASE_URL;
+
+const initialUi: UiState = {
+  screen: "title",
+  champ: null,
+  selectedCar: 0,
+  selectedTrack: 0,
+  save: {
+    version: 1,
+    bestLap: {},
+    bestRace: {},
+    muted: false,
+    shake: true,
+    lastCar: 0,
+    lastTrack: 0,
+  },
+  results: null,
+};
+
+export function NitroCircuit() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef = useRef<Engine | null>(null);
+  const [ui, setUi] = useState<UiState>(initialUi);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const engine = createEngine(canvas, setUi);
+    engineRef.current = engine;
+
+    let removeBack: (() => void) | undefined;
+    if (Capacitor.isNativePlatform()) {
+      void CapApp.addListener("backButton", () => {
+        if (!engine.back()) void CapApp.exitApp();
+      }).then((h) => {
+        removeBack = () => void h.remove();
+      });
+    }
+    return () => {
+      removeBack?.();
+      engine.destroy();
+      engineRef.current = null;
+    };
+  }, []);
+
+  const e = () => engineRef.current;
+  const screen = ui.screen;
+
+  return (
+    <main className="fixed inset-0 overflow-hidden bg-bg text-fg font-sans">
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 h-full w-full touch-none"
+        onContextMenu={(ev) => ev.preventDefault()}
+      />
+      <div className="scanlines absolute inset-0 z-10" />
+      <div className="crt-vignette absolute inset-0 z-10" />
+
+      {screen === "title" && <Title ui={ui} engine={e} />}
+      {screen === "garage" && <Garage ui={ui} engine={e} />}
+      {screen === "pause" && <Pause ui={ui} engine={e} />}
+      {screen === "results" && <Results ui={ui} engine={e} />}
+      {screen === "standings" && <Standings ui={ui} engine={e} />}
+      {screen === "race" && <RaceChrome engine={e} />}
+    </main>
+  );
+}
+
+function Title({
+  ui,
+  engine,
+}: {
+  ui: UiState;
+  engine: () => Engine | null;
+}) {
+  return (
+    <div className="absolute inset-0 z-20 flex flex-col">
+      <div className="copper-bars h-2.5 w-full" />
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-6">
+        <p className="mb-2 text-center text-xs tracking-[0.35em] text-accent-2">
+          KICKSTART SOFTWARE PRESENTS
+        </p>
+        <h1 className="font-display text-6xl font-bold leading-none tracking-tight text-fg sm:text-7xl">
+          NITRO
+        </h1>
+        <h1 className="mb-2 font-display text-6xl font-bold leading-none tracking-tight text-accent sm:text-7xl">
+          CIRCUIT
+        </h1>
+        <p className="mb-8 font-mono text-sm text-muted">AMIGA 600 · 1994</p>
+        <div className="flex w-full max-w-sm flex-col gap-3">
+          <MenuBtn primary onClick={() => engine()?.startRace()}>
+            Start
+          </MenuBtn>
+          <MenuBtn onClick={() => engine()?.startChampionship()}>Championship</MenuBtn>
+          <MenuBtn onClick={() => engine()?.garage()}>Garage</MenuBtn>
+        </div>
+        <p className="mt-8 max-w-md text-center font-mono text-[11px] leading-relaxed text-muted">
+          W ACCEL · S BRAKE · A/D STEER · SPACE DRIFT · P PAUSE
+        </p>
+        {ui.save.bestLap.oval != null && (
+          <p className="mt-2 font-mono text-[11px] text-accent-2">
+            OVAL BEST {formatTime(ui.save.bestLap.oval)}
+          </p>
+        )}
+      </div>
+      <div className="flex items-center justify-between px-4 py-2">
+        <p className="font-mono text-[10px] tracking-widest text-muted">BLITTERSOFT 1994</p>
+        <button
+          type="button"
+          className="font-mono text-[10px] tracking-widest text-muted"
+          onClick={() => engine()?.setMuted(!ui.save.muted)}
+        >
+          {ui.save.muted ? "AUDIO OFF" : "AUDIO ON"}
+        </button>
+      </div>
+      <div className="copper-bars h-2.5 w-full" />
+    </div>
+  );
+}
+
+function Garage({
+  ui,
+  engine,
+}: {
+  ui: UiState;
+  engine: () => Engine | null;
+}) {
+  const car = CARS[ui.selectedCar];
+  return (
+    <div className="absolute inset-0 z-20 flex flex-col bg-bg/70 px-4 py-6 backdrop-blur-[2px] sm:px-8">
+      <div className="copper-bars mb-4 h-1.5 w-full" />
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <div>
+          <p className="font-mono text-[11px] tracking-[0.25em] text-accent-2">GARAGE</p>
+          <h2 className="font-display text-3xl font-semibold leading-none">Select machine</h2>
+        </div>
+        <button type="button" className="font-mono text-xs text-muted" onClick={() => engine()?.title()}>
+          BACK
+        </button>
+      </div>
+      <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 overflow-auto md:grid-cols-4">
+        {CARS.map((c, i) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => engine()?.selectCar(i)}
+            className={`amiga-bevel bg-surface p-3 text-left transition-colors ${
+              i === ui.selectedCar ? "ring-2 ring-accent" : ""
+            }`}
+          >
+            <img src={BASE + c.src} alt="" className="mx-auto h-24 w-24 object-contain" />
+            <p className="mt-2 font-display text-lg font-semibold leading-none">{c.name}</p>
+            <p className="font-mono text-[10px] text-muted">{c.handle}</p>
+          </button>
+        ))}
+      </div>
+      <div className="mt-4 amiga-bevel bg-surface p-4">
+        <p className="font-display text-xl font-semibold text-accent">{car.name}</p>
+        <p className="mb-3 text-sm text-muted">{car.blurb}</p>
+        <Stat label="ACCEL" value={car.accel} />
+        <Stat label="TOP" value={car.top / 1.1} />
+        <Stat label="GRIP" value={car.grip / 1.12} />
+        <Stat label="TURN" value={car.turn / 1.12} />
+      </div>
+      <div className="mt-4">
+        <p className="mb-2 font-mono text-[11px] tracking-[0.25em] text-accent-2">CIRCUIT</p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {TRACKS.map((t, i) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => engine()?.selectTrack(i)}
+              className={`amiga-bevel bg-surface-2 px-3 py-2 text-left ${
+                i === ui.selectedTrack ? "ring-2 ring-accent-2" : ""
+              }`}
+            >
+              <p className="font-display text-base font-semibold leading-tight">{t.name}</p>
+              <p className="font-mono text-[10px] text-muted">{t.subtitle}</p>
+              {ui.save.bestLap[t.id] != null && (
+                <p className="font-mono text-[10px] text-accent-2">{formatTime(ui.save.bestLap[t.id])}</p>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+      <MenuBtn primary className="mt-4" onClick={() => engine()?.startRace()}>
+        Race
+      </MenuBtn>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="mb-1.5 flex items-center gap-3">
+      <span className="w-12 font-mono text-[10px] text-muted">{label}</span>
+      <div className="h-2 flex-1 bg-bg amiga-bevel-in">
+        <div className="h-full bg-accent" style={{ width: `${Math.min(100, value * 100)}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function Pause({
+  ui,
+  engine,
+}: {
+  ui: UiState;
+  engine: () => Engine | null;
+}) {
+  return (
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-bg/60 px-4">
+      <div className="amiga-bevel w-full max-w-sm bg-surface p-6">
+        <h2 className="mb-4 font-display text-3xl font-semibold">Paused</h2>
+        <div className="flex flex-col gap-3">
+          <MenuBtn primary onClick={() => engine()?.resume()}>
+            Resume
+          </MenuBtn>
+          <MenuBtn onClick={() => engine()?.setMuted(!ui.save.muted)}>
+            {ui.save.muted ? "Audio off" : "Audio on"}
+          </MenuBtn>
+          <MenuBtn onClick={() => engine()?.setShake(!ui.save.shake)}>
+            {ui.save.shake ? "Shake on" : "Shake off"}
+          </MenuBtn>
+          <MenuBtn onClick={() => engine()?.title()}>Quit to title</MenuBtn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Results({
+  ui,
+  engine,
+}: {
+  ui: UiState;
+  engine: () => Engine | null;
+}) {
+  const rows = ui.results ?? [];
+  const you = rows.find((r) => r.name === "YOU");
+  return (
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-bg/70 px-4">
+      <div className="amiga-bevel w-full max-w-md bg-surface p-6">
+        <p className="font-mono text-[11px] tracking-[0.25em] text-accent-2">CHEQUERED FLAG</p>
+        <h2 className="mb-4 font-display text-3xl font-semibold">
+          {you?.place === 1 ? "You win" : `P${you?.place ?? "-"}`}
+        </h2>
+        <ol className="mb-5 space-y-2">
+          {rows.map((r) => (
+            <li
+              key={r.name}
+              className="flex items-baseline justify-between gap-3 font-mono text-sm"
+            >
+              <span className="flex items-center gap-2">
+                <span className="inline-block size-2" style={{ background: r.color }} />
+                <span className={r.name === "YOU" ? "text-accent" : "text-fg"}>
+                  {r.place}. {r.name}
+                </span>
+              </span>
+              <span className="text-muted">{r.finished ? formatTime(r.time) : "DNF"}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="flex flex-col gap-3">
+          {ui.champ && ui.champ.round < TRACKS.length - 1 && (
+            <MenuBtn primary onClick={() => engine()?.nextChampionshipRace()}>
+              Next race
+            </MenuBtn>
+          )}
+          {ui.champ && ui.champ.round >= TRACKS.length - 1 && (
+            <MenuBtn primary onClick={() => engine()?.showStandings()}>
+              Standings
+            </MenuBtn>
+          )}
+          {!ui.champ && (
+            <MenuBtn primary onClick={() => engine()?.startRace()}>
+              Race again
+            </MenuBtn>
+          )}
+          <MenuBtn onClick={() => engine()?.title()}>Title</MenuBtn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Standings({
+  ui,
+  engine,
+}: {
+  ui: UiState;
+  engine: () => Engine | null;
+}) {
+  const champ = ui.champ;
+  if (!champ) return null;
+  const ranked = champ.names
+    .map((n, i) => ({ n, p: champ.points[i] }))
+    .sort((a, b) => b.p - a.p);
+  return (
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-bg/70 px-4">
+      <div className="amiga-bevel w-full max-w-md bg-surface p-6">
+        <p className="font-mono text-[11px] tracking-[0.25em] text-accent-2">CHAMPIONSHIP</p>
+        <h2 className="mb-4 font-display text-3xl font-semibold">Standings</h2>
+        <ol className="mb-5 space-y-2">
+          {ranked.map((r, i) => (
+            <li key={r.n} className="flex justify-between font-mono text-sm">
+              <span className={r.n === "YOU" ? "text-accent" : ""}>
+                {i + 1}. {r.n}
+              </span>
+              <span>{r.p} PTS</span>
+            </li>
+          ))}
+        </ol>
+        <MenuBtn primary onClick={() => engine()?.title()}>
+          Title
+        </MenuBtn>
+      </div>
+    </div>
+  );
+}
+
+function RaceChrome({ engine }: { engine: () => Engine | null }) {
+  const [touch] = useState(
+    () => typeof window !== "undefined" && (Capacitor.isNativePlatform() || window.matchMedia("(pointer: coarse)").matches),
+  );
+  const set = (v: Parameters<Engine["setVirtual"]>[0]) => engine()?.setVirtual(v);
+
+  return (
+    <>
+      <button
+        type="button"
+        className="absolute top-4 left-1/2 z-20 -translate-x-1/2 amiga-bevel bg-surface/80 px-4 py-2 font-mono text-xs tracking-widest text-fg"
+        style={{ marginTop: "var(--safe-t)" }}
+        onClick={() => engine()?.pause()}
+      >
+        PAUSE
+      </button>
+      {touch && (
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between p-3 md:p-5"
+          style={{ paddingLeft: "calc(0.75rem + var(--safe-l))", paddingRight: "calc(0.75rem + var(--safe-r))", paddingBottom: "calc(0.75rem + var(--safe-b))" }}
+        >
+          <div className="pointer-events-auto flex gap-2">
+            <TouchBtn label="◀" onHold={(on) => set({ left: on })} wide />
+            <TouchBtn label="▶" onHold={(on) => set({ right: on })} wide />
+          </div>
+          <div className="pointer-events-auto flex gap-2">
+            <TouchBtn label="DRIFT" onHold={(on) => set({ handbrake: on })} />
+            <TouchBtn label="BRAKE" onHold={(on) => set({ brake: on })} />
+            <TouchBtn label="GAS" onHold={(on) => set({ throttle: on })} accent />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function TouchBtn({
+  label,
+  onHold,
+  wide,
+  accent,
+}: {
+  label: string;
+  onHold: (on: boolean) => void;
+  wide?: boolean;
+  accent?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      className={`amiga-bevel select-none font-mono text-xs tracking-wider ${
+        wide ? "h-20 w-24 text-2xl" : "h-20 w-[4.5rem]"
+      } ${accent ? "bg-accent text-bg" : "bg-surface/85 text-fg"}`}
+      onPointerDown={(ev) => {
+        ev.preventDefault();
+        ev.currentTarget.setPointerCapture(ev.pointerId);
+        onHold(true);
+      }}
+      onPointerUp={() => onHold(false)}
+      onPointerCancel={() => onHold(false)}
+      onLostPointerCapture={() => onHold(false)}
+      onContextMenu={(ev) => ev.preventDefault()}
+    >
+      {label}
+    </button>
+  );
+}
+
+function MenuBtn({
+  children,
+  onClick,
+  primary,
+  className = "",
+}: {
+  children: string;
+  onClick: () => void;
+  primary?: boolean;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`amiga-bevel min-h-12 w-full px-4 font-display text-xl font-semibold tracking-wide ${
+        primary ? "bg-accent text-bg" : "bg-surface-2 text-fg"
+      } ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
