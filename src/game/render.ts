@@ -91,7 +91,7 @@ const SHAPES: Record<CarShape, ShapeSpec> = {
   },
 };
 
-const S = 5; // sprite pixels per world unit
+let S = 5; // sprite pixels per world unit
 const SW = 34; // sprite width in world units
 const SH = 70;
 
@@ -313,6 +313,13 @@ function spritesFor(def: CarDef): Sprites {
     spriteCache.set(def.id, s);
   }
   return s;
+}
+
+/** Re-render sprites at another resolution (used by the icon generator). */
+export function setSpriteScale(n: number) {
+  S = n;
+  spriteCache.clear();
+  previewCache.clear();
 }
 
 /** Data-URL of the car for menus (nose up, roof lifted slightly). */

@@ -51,6 +51,8 @@ export function createEngine(canvas: HTMLCanvasElement, onUi: (s: UiState) => vo
   let crashCool = 0;
   let lastTrauma = 0;
   let lastBeep = 4;
+  let prevBoost = 0;
+  let prevLap = 0;
   let results: ResultRow[] | null = null;
   audio.setMuted(save.muted);
 
@@ -88,6 +90,8 @@ export function createEngine(canvas: HTMLCanvasElement, onUi: (s: UiState) => vo
     screen = "race";
     results = null;
     lastBeep = 4;
+    prevBoost = 0;
+    prevLap = 0;
     crashCool = 0;
     lastTrauma = 0;
     acc = 0;
@@ -187,7 +191,11 @@ export function createEngine(canvas: HTMLCanvasElement, onUi: (s: UiState) => vo
       }
       if (screen === "race") {
         const p = race.player;
-        audio.engine(spd, p.throttle, dt);
+        audio.engine(spd, p.throttle, dt, p.brake, p.dist > race.track.def.roadHalf);
+        if (p.boost > 0 && prevBoost <= 0) audio.boost();
+        prevBoost = p.boost;
+        if (p.lap > prevLap) audio.lapChime();
+        prevLap = p.lap;
         const slip = Math.abs(p.vx * Math.cos(p.heading) - p.vy * Math.sin(p.heading));
         audio.skid(p.handbrake || slip > 28 ? Math.min(1, spd / 180) : 0);
         crashCool = Math.max(0, crashCool - dt);

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { createEngine, type Engine, type UiState } from "../game/engine";
@@ -348,17 +348,59 @@ function RaceChrome({ engine }: { engine: () => Engine | null }) {
       </button>
       {touch && (
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between p-3 md:p-5"
-          style={{ paddingLeft: "calc(0.75rem + var(--safe-l))", paddingRight: "calc(0.75rem + var(--safe-r))", paddingBottom: "calc(0.75rem + var(--safe-b))" }}
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between"
+          style={{
+            paddingLeft: "calc(1rem + var(--safe-l))",
+            paddingRight: "calc(1rem + var(--safe-r))",
+            paddingBottom: "calc(0.9rem + var(--safe-b))",
+          }}
         >
-          <div className="pointer-events-auto flex gap-2">
-            <TouchBtn label="◀" onHold={(on) => set({ left: on })} wide />
-            <TouchBtn label="▶" onHold={(on) => set({ right: on })} wide />
+          <div className="pointer-events-auto flex h-24 overflow-hidden rounded-full" style={GLASS}>
+            <HoldBtn
+              label="Steer left"
+              onHold={(on) => set({ left: on })}
+              className="flex h-full w-[6.5rem] items-center justify-center"
+            >
+              <Chevron dir="left" />
+            </HoldBtn>
+            <div className="my-4 w-px bg-white/15" />
+            <HoldBtn
+              label="Steer right"
+              onHold={(on) => set({ right: on })}
+              className="flex h-full w-[6.5rem] items-center justify-center"
+            >
+              <Chevron dir="right" />
+            </HoldBtn>
           </div>
-          <div className="pointer-events-auto flex gap-2">
-            <TouchBtn label="DRIFT" onHold={(on) => set({ handbrake: on })} />
-            <TouchBtn label="BRAKE" onHold={(on) => set({ brake: on })} />
-            <TouchBtn label="GAS" onHold={(on) => set({ throttle: on })} accent />
+
+          <div className="pointer-events-auto flex items-end gap-3">
+            <HoldBtn
+              label="Drift"
+              onHold={(on) => set({ handbrake: on })}
+              className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-2xl"
+              glass
+            >
+              <DriftIcon />
+              <span className="font-mono text-[10px] tracking-[0.18em] text-white/85">DRIFT</span>
+            </HoldBtn>
+            <HoldBtn
+              label="Accelerator"
+              onHold={(on) => set({ throttle: on })}
+              className="flex h-32 w-24 flex-col items-center justify-center gap-2 rounded-3xl"
+              tone="red"
+            >
+              <PedalIcon tall />
+              <span className="font-mono text-[11px] tracking-[0.2em] text-white">GAS</span>
+            </HoldBtn>
+            <HoldBtn
+              label="Brake"
+              onHold={(on) => set({ brake: on })}
+              className="flex h-24 w-24 flex-col items-center justify-center gap-1.5 rounded-3xl"
+              glass
+            >
+              <PedalIcon />
+              <span className="font-mono text-[10px] tracking-[0.18em] text-white/85">BRAKE</span>
+            </HoldBtn>
           </div>
         </div>
       )}
@@ -366,35 +408,104 @@ function RaceChrome({ engine }: { engine: () => Engine | null }) {
   );
 }
 
-function TouchBtn({
-  label,
+const GLASS: CSSProperties = {
+  background: "linear-gradient(180deg, rgba(48,54,66,0.55), rgba(10,12,16,0.65))",
+  border: "1px solid rgba(255,255,255,0.18)",
+  boxShadow: "0 8px 22px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.16)",
+  backdropFilter: "blur(6px)",
+};
+
+function HoldBtn({
   onHold,
-  wide,
-  accent,
+  children,
+  className,
+  label,
+  tone,
+  glass,
 }: {
-  label: string;
   onHold: (on: boolean) => void;
-  wide?: boolean;
-  accent?: boolean;
+  children: ReactNode;
+  className: string;
+  label: string;
+  tone?: "red";
+  glass?: boolean;
 }) {
+  const [down, setDown] = useState(false);
+  const press = (on: boolean) => {
+    setDown(on);
+    onHold(on);
+  };
+  let style: CSSProperties = {};
+  if (tone === "red") {
+    style = {
+      background: down
+        ? "linear-gradient(180deg, #ff5a60, #c4161c)"
+        : "linear-gradient(180deg, rgba(232,33,39,0.88), rgba(140,12,18,0.92))",
+      border: "1px solid rgba(255,255,255,0.28)",
+      boxShadow: down
+        ? "0 2px 8px rgba(232,33,39,0.5), inset 0 1px 0 rgba(255,255,255,0.3)"
+        : "0 8px 22px rgba(0,0,0,0.5), 0 0 18px rgba(232,33,39,0.28), inset 0 1px 0 rgba(255,255,255,0.3)",
+    };
+  } else if (glass) {
+    style = {
+      ...GLASS,
+      ...(down
+        ? { background: "linear-gradient(180deg, rgba(255,255,255,0.3), rgba(255,255,255,0.12))" }
+        : {}),
+    };
+  } else if (down) {
+    style = { background: "rgba(255,255,255,0.18)" };
+  }
   return (
     <button
       type="button"
-      className={`amiga-bevel select-none font-mono text-xs tracking-wider ${
-        wide ? "h-20 w-24 text-2xl" : "h-20 w-[4.5rem]"
-      } ${accent ? "bg-accent text-bg" : "bg-surface/85 text-fg"}`}
+      aria-label={label}
+      className={`touch-none select-none transition-transform duration-75 ${className}`}
+      style={{ ...style, transform: down ? "scale(0.94)" : "scale(1)" }}
       onPointerDown={(ev) => {
         ev.preventDefault();
         ev.currentTarget.setPointerCapture(ev.pointerId);
-        onHold(true);
+        press(true);
       }}
-      onPointerUp={() => onHold(false)}
-      onPointerCancel={() => onHold(false)}
-      onLostPointerCapture={() => onHold(false)}
+      onPointerUp={() => press(false)}
+      onPointerCancel={() => press(false)}
+      onLostPointerCapture={() => press(false)}
       onContextMenu={(ev) => ev.preventDefault()}
     >
-      {label}
+      {children}
     </button>
+  );
+}
+
+function Chevron({ dir }: { dir: "left" | "right" }) {
+  return (
+    <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d={dir === "left" ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"} />
+    </svg>
+  );
+}
+
+function DriftIcon() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M7 21c0-6 5-6 5-12" />
+      <path d="M13 21c0-6 5-6 5-12" />
+      <path d="M9.5 11.5L12 8l2.5 3.5" />
+    </svg>
+  );
+}
+
+function PedalIcon({ tall }: { tall?: boolean }) {
+  return tall ? (
+    <svg width="32" height="44" viewBox="0 0 24 34" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <rect x="5" y="2" width="14" height="30" rx="3.5" />
+      <path d="M8.5 10h7M8.5 16h7M8.5 22h7" />
+    </svg>
+  ) : (
+    <svg width="38" height="30" viewBox="0 0 30 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <rect x="3" y="3" width="24" height="18" rx="4" />
+      <path d="M10 8v8M15 8v8M20 8v8" />
+    </svg>
   );
 }
 

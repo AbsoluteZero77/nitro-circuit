@@ -180,7 +180,8 @@ function stepCar(race: RaceState, car: Car, dt: number) {
   const hb = car.handbrake && speedAbs > 40;
   const grip = gripBase * surfaceGrip * (hb ? 0.22 : 1);
   spdL *= Math.exp(-grip * dt);
-  spdF *= Math.exp(-(surfaceDrag + (car.throttle < 0.15 ? 0.55 : 0) + (hb ? 0.8 : 0)) * dt);
+  // Lifting off lets the car roll (EV-style light regen), rather than stopping dead.
+  spdF *= Math.exp(-(surfaceDrag + (car.throttle < 0.15 ? 0.2 : 0) + (hb ? 0.8 : 0)) * dt);
   spdF = clamp(spdF, -maxSpeed * 0.38, maxSpeed + (car.boost > 0 ? 70 : 0));
 
   const slip = Math.abs(spdL);
